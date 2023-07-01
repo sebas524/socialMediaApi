@@ -1,72 +1,19 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const myJwt = require("../helpers/jwt");
 
-const userTest = (req, res) => {
-  return res.status(200).json({ hello: "world form user controller" });
+// ! ---REGISTER USERS--- :
+
+const testUser = (req, res) => {
+  return res.status(200).json({
+    status: "Success",
+    message: "User test route accessed",
+    user: req.user,
+  });
 };
 
-// // ! REGISTER USERS:
-// const register = async (req, res) => {
-//   // * Get request data:
-//   let params = req.body;
-
-//   try {
-//     // * Validate required data:
-//     const { firstName, email, password, username } = params;
-
-//     if (!firstName || !email || !password || !username) {
-//       return res.status(400).json({
-//         status: "Error",
-//         message: "One or more required values missing.",
-//       });
-//     }
-//     // * Validate in case of duplicates with db:
-
-//     // const existingUsers = await User.find({
-//     //   $or: [
-//     //     { email: email.toLowerCase() },
-//     //     { username: username.toLowerCase() },
-//     //   ],
-//     // });
-
-//     // if (existingUsers.length >= 1) {
-//     //   return res.status(400).json({
-//     //     message: "User already exists.",
-//     //   });
-//     // }
-//   } catch (error) {
-//     // return res.status(500).json({
-//     //   message: "Internal error, contact admin.",
-//     // });
-//     console.log("XXXXXXX", error);
-//     throw new Error("heeeeeeeeellooo");
-//   }
-
-//   // * if all good, hash password:
-//   let hashedPassword = await bcrypt.hash(params.password, 10);
-//   params.password = hashedPassword;
-
-//   // * then create a new user object:
-//   let newUser = new User(params);
-
-//   // * save new user to db:
-//   const savedUser = await newUser.save();
-//   if (!savedUser) {
-//     return res.status(500).json({
-//       message: "Error saving new user to DB.",
-//     });
-//   }
-
-//   return res.status(200).json({
-//     status: "Success",
-//     message: "User has been correctly saved to DB.",
-//     newUser: savedUser,
-//   });
-// };
-
-// ! REGISTER USERS:
 const register = async (req, res) => {
-  // * Get request data:
+  // * fetch request data:
   let params = req.body;
 
   // * Validate required data:
@@ -95,6 +42,7 @@ const register = async (req, res) => {
       newUser: savedUser,
     });
   } catch (error) {
+    // * if errors:
     if (error.code === 11000) {
       return res.status(400).json({
         status: "Error",
@@ -109,7 +57,58 @@ const register = async (req, res) => {
   }
 };
 
+const login = async (req, res) => {
+  // * fetch request data:
+  let params = req.body;
+  const { email, password } = params;
+  // * validate data:
+  if (!email || !password) {
+    return res.status(400).json({
+      status: "Error",
+      message: "Email or password are missing.",
+    });
+  }
+
+  //  * look for email in db:
+  const foundUser = await User.findOne({ email: email });
+  // ! .select({password:0}) means you do not want the password to be shown in respond.
+  // .select({
+  //   password: 0,
+  // });
+  if (!foundUser) {
+    return res.status(400).json({
+      status: "Error",
+      message: "Invalid email or password.",
+    });
+  }
+
+  // * check if password correct:
+  const correctPassword = bcrypt.compareSync(password, foundUser.password); //! here we are comparing password from req.body with password from foundUser(db)
+  if (!correctPassword) {
+    return res.status(400).json({
+      status: "Error",
+      message: "Invalid email or password.",
+    });
+  }
+  // * give token:
+  const token = myJwt.createToken(foundUser);
+  // * return user info
+
+  return res.status(200).json({
+    status: "Success",
+    message: "Correct credentials.",
+    user: {
+      id: foundUser._id,
+      name: foundUser.firstName,
+      email: email,
+      username: foundUser.username,
+    },
+    token: token,
+  });
+};
+
 module.exports = {
-  userTest,
   register,
+  login,
+  testUser,
 };
