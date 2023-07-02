@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const myJwt = require("../helpers/jwt");
+const pagination = require("mongoose-pagination");
 
 // ! ---REGISTER USERS--- :
 
@@ -107,8 +108,136 @@ const login = async (req, res) => {
   });
 };
 
+const getUsers = async (req, res) => {
+  let page = 1;
+  if (req.params.page) {
+    page = parseInt(req.params.page);
+  }
+
+  // * paginate:
+  let itemsPerPage = 3;
+
+  try {
+    const totalCount = await User.countDocuments({}); // Count total number of users
+
+    const allUsers = await User.find({})
+      .sort({ created_at: -1 })
+      .paginate(page, itemsPerPage);
+
+    if (!allUsers) {
+      return res.status(404).json({
+        status: "error",
+        message: "No users found.",
+      });
+    }
+
+    const totalPages = Math.ceil(totalCount / itemsPerPage); // Calculate total number of pages
+
+    return res.status(200).json({
+      status: "success",
+      totalUsers: totalCount,
+      totalPages: totalPages,
+      currentPage: page,
+      itemsPerPage: itemsPerPage,
+      users: allUsers,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+};
+
+const getUser = async (req, res) => {
+  // * get user id from id in link:
+  const id = req.params.id;
+
+  try {
+    // * get user info from db
+    const userInfo = await User.findById(id).select({ password: 0, role: 0 });
+
+    // * return:
+    if (!userInfo) {
+      return res
+        .status(404)
+        .json({ status: "Error", message: "User does not exist" });
+    }
+    return res.status(200).json({
+      status: "success",
+      user: userInfo,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+};
+
+const updateUser = async (req, res) => {
+  // * get info from user that we want to update
+  let userInfo = req.user;
+
+  // * get info from body
+  let newUserInfo = req.body;
+
+  // * remove info we dont need from user:
+  delete newUserInfo.iat;
+  delete newUserInfo.exp;
+  delete newUserInfo.role;
+  delete newUserInfo.image;
+
+  // * see if user already exist:
+  try {
+    // ! remember this gives you a [{}] with all users.
+    const dbUsers = await User.find({});
+    console.log("xxx", dbUsers);
+
+    // ! now we search each user and see if username matches our body's username and same thing with email.
+    let foundUser = false;
+    dbUsers.forEach((user) => {
+      if (
+        user.username === newUserInfo.username ||
+        user.email === newUserInfo.email
+      ) {
+        foundUser = true;
+        return;
+      }
+    });
+
+    // ! if it matches that means username or email is already taken and therefore we must show error.
+    if (foundUser) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Username or email already taken.",
+      });
+    }
+  } catch (error) {
+    console.log("XXX", error);
+  }
+
+  // * if password wants to be change then bcrypt it
+  // * find and update
+
+  if (newUserInfo.password) {
+    let hashedPassword = await bcrypt.hash(newUserInfo.password, 10);
+    newUserInfo.password = hashedPassword;
+  }
+
+  return res.status(200).send({
+    status: "success",
+    message: "update method working",
+    newUserInfo,
+  });
+};
+
 module.exports = {
   register,
   login,
+  getUsers,
+  getUser,
   testUser,
+  updateUser,
 };

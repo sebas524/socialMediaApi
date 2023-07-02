@@ -22,6 +22,7 @@ const UserSchema = Schema({
     type: String,
     required: true,
   },
+  bio: { type: String },
   role: {
     type: String,
     default: "roleUser",
