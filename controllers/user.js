@@ -2,6 +2,8 @@ const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const myJwt = require("../helpers/jwt");
 const pagination = require("mongoose-pagination");
+const fs = require("fs");
+const path = require("path");
 
 // ! ---REGISTER USERS--- :
 
@@ -245,6 +247,96 @@ const updateUser = async (req, res) => {
     });
 };
 
+const uploadPhoto = async (req, res) => {
+  // * multer configuration:
+  //// ! done already in routes file!!!
+  // * see if file is being sent:
+  if (!req.file) {
+    return res
+      .status(400)
+      .json({ status: "error", message: "No file currently being uploaded." });
+  }
+
+  // * name of img file:
+  const filenameOriginal = req.file.originalname;
+  // * extension of img file(we get it by splitting filename by the dot. ex: "mypic","jpeg"):
+  const fileSplit = filenameOriginal.split(".");
+  const fileExtension = fileSplit[1];
+
+  // * check that extension is correct:
+  if (
+    fileExtension !== "png" &&
+    fileExtension !== "jpg" &&
+    fileExtension !== "jpeg" &&
+    fileExtension !== "gif"
+  ) {
+    // * delete file and give respond:
+    fs.unlink(req.file.path, (err) => {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Invalid file type" });
+    });
+  }
+
+  // * starting here we know we have a correct image.
+  // * now we save image to specific user image:
+  try {
+    const userImageUpdated = await User.findOneAndUpdate(
+      { _id: req.user.id },
+      { image: req.file.filename },
+      { new: true }
+    );
+    if (!userImageUpdated) {
+      return res.status(400).send({
+        status: "Error",
+        message: "photo has not been uploaded",
+      });
+    }
+    return res.status(200).send({
+      status: "success",
+      message: "photo has been uploaded",
+      file: req.file,
+      user: userImageUpdated,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      status: "Error",
+      message: "Something went wrong. Please contact admin.",
+    });
+  }
+};
+
+const getImage = (req, res) => {
+  let chosenImage = req.params.chosenImage; //! REMEBER chosenImage has to match :chosenImage in ROUTES!!!!!!!
+  // * where is physical path:
+  let physicalPath = `./images/users/` + chosenImage;
+
+  // * does image with that path exist?
+  try {
+    fs.stat(physicalPath, (error, exists) => {
+      if (exists) {
+        return res.sendFile(path.resolve(physicalPath));
+      } else {
+        // * return file
+        return res.status(404).json({
+          status: "error",
+          message: "image does not exists",
+          exists,
+          chosenImage,
+          physicalPath,
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -252,4 +344,6 @@ module.exports = {
   getUser,
   testUser,
   updateUser,
+  uploadPhoto,
+  getImage,
 };
