@@ -179,6 +179,7 @@ const getUser = async (req, res) => {
 const updateUser = async (req, res) => {
   // * get info from user that we want to update
   let userInfo = req.user;
+  console.log(userInfo);
 
   // * get info from body
   let newUserInfo = req.body;
@@ -193,7 +194,6 @@ const updateUser = async (req, res) => {
   try {
     // ! remember this gives you a [{}] with all users.
     const dbUsers = await User.find({});
-    console.log("xxx", dbUsers);
 
     // ! now we search each user and see if username matches our body's username and same thing with email.
     let foundUser = false;
@@ -219,18 +219,30 @@ const updateUser = async (req, res) => {
   }
 
   // * if password wants to be change then bcrypt it
-  // * find and update
 
   if (newUserInfo.password) {
     let hashedPassword = await bcrypt.hash(newUserInfo.password, 10);
     newUserInfo.password = hashedPassword;
   }
+  // * find and update
 
-  return res.status(200).send({
-    status: "success",
-    message: "update method working",
-    newUserInfo,
-  });
+  User.findByIdAndUpdate(userInfo.id, newUserInfo, {
+    new: true,
+  })
+    .then((updatedUser) => {
+      return res.status(200).send({
+        status: "success",
+        message: "update method working",
+        updatedUser,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      return res.status(500).json({
+        status: "Error",
+        message: "Server error, please contact admin.",
+      });
+    });
 };
 
 module.exports = {
