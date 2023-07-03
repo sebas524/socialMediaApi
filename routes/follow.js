@@ -11,6 +11,12 @@ router.delete(
   authMiddleware.auth,
   FollowController.deleteFollow
 );
+router.get("/usersIFollow", authMiddleware.auth, FollowController.usersIFollow);
+router.get(
+  "/usersFollowingMe/:id?/:page?",
+  authMiddleware.auth,
+  FollowController.usersFollowingMe
+);
 
 // * export router
 module.exports = router;

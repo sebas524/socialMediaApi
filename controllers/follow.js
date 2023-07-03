@@ -1,5 +1,6 @@
 const Follow = require("../models/follow");
 const User = require("../models/user");
+const mongoosePagination = require("mongoose-pagination");
 
 const followTest = (req, res) => {
   return res.status(200).json({ hello: "world form follow controller" });
@@ -100,10 +101,66 @@ const deleteFollow = async (req, res) => {
   }
 };
 // * LIST OF USERS IM FOLLOWING
+
+const usersIFollow = async (req, res) => {
+  try {
+    const loggedInAs = req.user;
+    let userId = req.user.id;
+
+    if (req.query.id) {
+      userId = req.query.id;
+    }
+
+    let page = parseInt(req.query.page) || 1;
+    const itemsPerPage = 1;
+
+    const follows = await Follow.find({ user: userId })
+      // ! populate means fill(in this example) "followed" with all the info from its User model.
+      .populate(
+        "followed",
+        // ! after the coma goes values that you do not want to show, therefore they have a minus next to them. you can also just write the values you are interested in and the others wont appear.
+        "-__v -password -created_at -role -firstName -lastName"
+      )
+      .paginate(page, itemsPerPage);
+
+    const totalFollows = await Follow.countDocuments({ user: userId });
+    const totalPages = Math.ceil(totalFollows / itemsPerPage);
+
+    return res.status(200).json({
+      status: "Success",
+      loggedInAs,
+      userIdBeingChecked: userId,
+      followInfo: {
+        totalFollowed: totalFollows,
+        totalPages,
+        currentPage: page,
+        follows,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+};
+
 // * LIST OF USERS THAT ARE FOLLOWING ME
+const usersFollowingMe = async (req, res) => {
+  const loggedInAs = req.user;
+
+  return res.status(200).json({
+    status: "In Progress",
+    message: "usersFollowingMe method working",
+    loggedInAs,
+  });
+};
 
 module.exports = {
   followTest,
   saveFollow,
   deleteFollow,
+  usersIFollow,
+  usersFollowingMe,
 };
