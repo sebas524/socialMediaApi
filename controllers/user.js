@@ -228,7 +228,7 @@ const updateUser = async (req, res) => {
   }
   // * find and update
 
-  User.findByIdAndUpdate(userInfo.id, newUserInfo, {
+  User.findByIdAndUpdate({ _id: userInfo.id }, newUserInfo, {
     new: true,
   })
     .then((updatedUser) => {
