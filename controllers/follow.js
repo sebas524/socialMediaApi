@@ -8,20 +8,20 @@ const followTest = (req, res) => {
 // * SAVE A FOLLOW(FOLLOW ACTION)
 
 const saveFollow = async (req, res) => {
-  // get data from body - which user am I going to follow?
+  // * get data from body - which user am I going to follow?
   const params = req.body;
 
-  // get the ID of the logged-in user
+  // * get the ID of the logged-in user
   const loggedInAs = req.user;
 
   try {
-    // Check if the user is already being followed
+    // * Check if the user is already being followed
     const existingFollow = await Follow.findOne({
       user: loggedInAs.id,
       followed: params.followed,
     });
 
-    // If the user is already being followed, show an error
+    // * If the user is already being followed, show an error
     if (existingFollow) {
       return res.status(400).json({
         status: "Error",
@@ -36,7 +36,7 @@ const saveFollow = async (req, res) => {
     });
   }
 
-  // Create a new Follow object
+  // * Create a new Follow object
   const userToFollow = new Follow({
     user: loggedInAs.id,
     followed: params.followed,
@@ -66,10 +66,44 @@ const saveFollow = async (req, res) => {
 };
 
 // * DELETE A FOLLOW(STOP FOLLOW ACTION)
+const deleteFollow = async (req, res) => {
+  // * get id from link:
+  const idToDelete = req.params.id;
+  // * get id from logged in as:
+  const loggedInAs = req.user;
+
+  try {
+    // * find and delete:
+    const foundFollowed = await Follow.findOneAndDelete({
+      user: loggedInAs.id,
+      followed: idToDelete,
+    });
+    if (!foundFollowed) {
+      return res.status(400).json({
+        status: "Error",
+        message: "id of follow not found.",
+        loggedInAs,
+      });
+    }
+    return res.status(200).json({
+      status: "Success",
+      message: "Followed has been deleted.",
+
+      deleted: foundFollowed,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+};
 // * LIST OF USERS IM FOLLOWING
 // * LIST OF USERS THAT ARE FOLLOWING ME
 
 module.exports = {
   followTest,
   saveFollow,
+  deleteFollow,
 };
