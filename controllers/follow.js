@@ -6,20 +6,44 @@ const followTest = (req, res) => {
 };
 
 // * SAVE A FOLLOW(FOLLOW ACTION)
+
 const saveFollow = async (req, res) => {
-  // * get data from body. which user am i going to follow?
+  // get data from body - which user am I going to follow?
   const params = req.body;
-  // * get id from identified user:
+
+  // get the ID of the logged-in user
   const loggedInAs = req.user;
 
-  // * create object with follow model.
+  try {
+    // Check if the user is already being followed
+    const existingFollow = await Follow.findOne({
+      user: loggedInAs.id,
+      followed: params.followed,
+    });
+
+    // If the user is already being followed, show an error
+    if (existingFollow) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Already following.",
+      });
+    }
+  } catch (error) {
+    console.log("XXX", error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Server error, please contact admin.",
+    });
+  }
+
+  // Create a new Follow object
   const userToFollow = new Follow({
     user: loggedInAs.id,
     followed: params.followed,
   });
 
   try {
-    // * save object in db
+    // Save the new Follow object in the database
     const savedFollow = await userToFollow.save();
     if (!savedFollow) {
       return res.status(400).send({
