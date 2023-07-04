@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // * load routes:
 app.use("/api/user", userRoutes);
-app.use("/api", postRoutes);
+app.use("/api/post", postRoutes);
 app.use("/api/follow", followRoutes);
 
 // * port listening:
