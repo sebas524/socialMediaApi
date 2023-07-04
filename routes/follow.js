@@ -13,7 +13,7 @@ router.delete(
 );
 router.get("/usersIFollow", authMiddleware.auth, FollowController.usersIFollow);
 router.get(
-  "/usersFollowingMe/:id?/:page?",
+  "/usersFollowingMe",
   authMiddleware.auth,
   FollowController.usersFollowingMe
 );

@@ -4,6 +4,8 @@ const myJwt = require("../helpers/jwt");
 const pagination = require("mongoose-pagination");
 const fs = require("fs");
 const path = require("path");
+const followsService = require("../helpers/followsService");
+const follow = require("../models/follow");
 
 // ! ---REGISTER USERS--- :
 
@@ -135,6 +137,8 @@ const getUsers = async (req, res) => {
 
     const totalPages = Math.ceil(totalCount / itemsPerPage); // Calculate total number of pages
 
+    let followInfo = await followsService.userIDsFromFollows(req.user.id);
+
     return res.status(200).json({
       status: "success",
       totalUsers: totalCount,
@@ -142,6 +146,8 @@ const getUsers = async (req, res) => {
       currentPage: page,
       itemsPerPage: itemsPerPage,
       users: allUsers,
+      following: followInfo.following,
+      follower: followInfo.followers,
     });
   } catch (error) {
     console.log(error);
@@ -156,6 +162,8 @@ const getUser = async (req, res) => {
   // * get user id from id in link:
   const id = req.params.id;
 
+  const loggedInAs = req.user;
+
   try {
     // * get user info from db
     const userInfo = await User.findById(id).select({ password: 0, role: 0 });
@@ -166,9 +174,14 @@ const getUser = async (req, res) => {
         .status(404)
         .json({ status: "Error", message: "User does not exist" });
     }
+    // * following info:
+    const followInfo = await followsService.amIfollowingUser(req.user.id, id);
     return res.status(200).json({
       status: "success",
-      user: userInfo,
+      loggedInAs,
+      userFound: userInfo,
+      following: followInfo.following,
+      follower: followInfo.follower,
     });
   } catch (error) {
     return res.status(500).json({
